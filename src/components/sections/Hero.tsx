@@ -103,6 +103,8 @@ export const Hero: React.FC = () => {
                   <img
                     src={profile.photoUrl}
                     alt={profile.displayName}
+                    loading="eager"
+                    decoding="async"
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/mohamed-reda.jpg';

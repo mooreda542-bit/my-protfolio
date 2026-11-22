@@ -2,7 +2,72 @@ import { PortfolioData, Profile, Project, Skill } from '../types/portfolio';
 import { INITIAL_DATA } from './defaultData';
 import { getSupabase, getSupabaseCredentials } from './supabase';
 
-const STORAGE_KEY = 'mohamed_reda_portfolio_data_v1';
+export const STORAGE_KEY = 'mohamed_reda_portfolio_data_v1';
+
+// Validate standard RFC 4122 UUID
+export const isUUID = (id: string): boolean => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+};
+
+// Generate an RFC 4122 v4 UUID reliably in all environments
+export const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+// Explicit Cloud Deletion: Project
+export const deleteProjectFromCloud = async (id: string): Promise<boolean> => {
+  if (!id || typeof id !== 'string' || !isUUID(id)) {
+    throw new Error(`Invalid project ID for cloud deletion: "${id}". A valid RFC 4122 UUID is required.`);
+  }
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    // Offline / local mode
+    return true;
+  }
+
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to delete project from cloud: ${error.message}`);
+  }
+
+  return true;
+};
+
+// Explicit Cloud Deletion: Skill
+export const deleteSkillFromCloud = async (id: string): Promise<boolean> => {
+  if (!id || typeof id !== 'string' || !isUUID(id)) {
+    throw new Error(`Invalid skill ID for cloud deletion: "${id}". A valid RFC 4122 UUID is required.`);
+  }
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    // Offline / local mode
+    return true;
+  }
+
+  const { error } = await supabase
+    .from('skills')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(`Failed to delete skill from cloud: ${error.message}`);
+  }
+
+  return true;
+};
 
 export const loadPortfolioData = async (): Promise<{ data: PortfolioData; source: 'supabase' | 'local' }> => {
   const { isValid } = getSupabaseCredentials();
@@ -95,40 +160,51 @@ export const loadPortfolioData = async (): Promise<{ data: PortfolioData; source
   return { data: INITIAL_DATA, source: 'local' };
 };
 
-export const savePortfolioData = async (data: PortfolioData): Promise<boolean> => {
-  // Always save to localStorage immediately for instant UI response and offline safety
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error('Failed saving to localStorage', e);
-  }
-
+export const savePortfolioData = async (data: PortfolioData): Promise<PortfolioData> => {
   const supabase = getSupabase();
   if (!supabase) {
-    return true; // saved locally
+    // Offline / local mode: update localStorage immediately and return
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed saving to localStorage in offline mode', e);
+    }
+    return data;
   }
 
+  // Clone data object to prevent unexpected mutations during sync
+  const syncedData: PortfolioData = {
+    profile: { ...data.profile },
+    projects: data.projects.map((p) => ({ ...p, technologies: [...p.technologies], screenshots: [...(p.screenshots || [])] })),
+    skills: data.skills.map((s) => ({ ...s })),
+  };
+
   try {
-    // 1. Sync Profile
-    await supabase.from('profile').upsert({
+    // 1. Sync Profile (upsert only)
+    const { error: profileError } = await supabase.from('profile').upsert({
       id: 'main',
-      name: data.profile.name,
-      display_name: data.profile.displayName,
-      title: data.profile.title,
-      location: data.profile.location,
-      phone: data.profile.phone,
-      email: data.profile.email,
-      github: data.profile.github,
-      about: data.profile.about,
-      photo_url: data.profile.photoUrl,
+      name: syncedData.profile.name,
+      display_name: syncedData.profile.displayName,
+      title: syncedData.profile.title,
+      location: syncedData.profile.location,
+      phone: syncedData.profile.phone,
+      email: syncedData.profile.email,
+      github: syncedData.profile.github,
+      about: syncedData.profile.about,
+      photo_url: syncedData.profile.photoUrl,
       updated_at: new Date().toISOString(),
     });
 
-    // 2. Sync Projects (upsert)
-    for (let i = 0; i < data.projects.length; i++) {
-      const proj = data.projects[i];
-      await supabase.from('projects').upsert({
-        id: proj.id.length > 30 ? proj.id : undefined, // uuid format
+    if (profileError) {
+      throw new Error(`Profile sync error: ${profileError.message}`);
+    }
+
+    // 2. Synchronize Project Inserts / Updates (Explicit upsert only; never delete cloud projects during save)
+    for (let i = 0; i < syncedData.projects.length; i++) {
+      const proj = syncedData.projects[i];
+      const validUUID = isUUID(proj.id);
+
+      const projectPayload: any = {
         name: proj.name,
         category: proj.category,
         description: proj.description,
@@ -140,13 +216,69 @@ export const savePortfolioData = async (data: PortfolioData): Promise<boolean> =
         featured: proj.featured || false,
         order_index: i,
         updated_at: new Date().toISOString(),
-      });
+      };
+
+      if (validUUID) {
+        projectPayload.id = proj.id;
+      }
+
+      const { data: savedProj, error: projErr } = await supabase
+        .from('projects')
+        .upsert(projectPayload)
+        .select('id')
+        .single();
+
+      if (projErr) {
+        throw new Error(`Project sync error on "${proj.name}": ${projErr.message}`);
+      }
+
+      // If Supabase generated or confirmed the UUID, keep client state in sync
+      if (savedProj?.id && savedProj.id !== proj.id) {
+        proj.id = savedProj.id;
+      }
     }
 
-    return true;
-  } catch (err) {
-    console.error('Error syncing data with Supabase:', err);
-    return false;
+    // 3. Synchronize Skills Inserts / Updates (Explicit upsert only; never delete cloud skills during save)
+    for (let i = 0; i < syncedData.skills.length; i++) {
+      const skill = syncedData.skills[i];
+      const validUUID = isUUID(skill.id);
+
+      const skillPayload: any = {
+        name: skill.name,
+        category: skill.category,
+        order_index: i,
+      };
+
+      if (validUUID) {
+        skillPayload.id = skill.id;
+      }
+
+      const { data: savedSkill, error: skillErr } = await supabase
+        .from('skills')
+        .upsert(skillPayload)
+        .select('id')
+        .single();
+
+      if (skillErr) {
+        throw new Error(`Skill sync error on "${skill.name}": ${skillErr.message}`);
+      }
+
+      // If Supabase assigned or confirmed the UUID, update local ID
+      if (savedSkill?.id && savedSkill.id !== skill.id) {
+        skill.id = savedSkill.id;
+      }
+    }
+
+    // 4. Update localStorage ONLY after cloud persistence succeeds
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(syncedData));
+    } catch (e) {
+      console.error('Failed saving to localStorage after successful cloud sync', e);
+    }
+
+    return syncedData;
+  } catch (err: any) {
+    console.error('Critical sync error with Supabase:', err);
+    throw err; // Propagate error so caller displays true state and cache is not corrupted
   }
 };
-

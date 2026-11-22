@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Project } from '../../types/portfolio';
 import { X, ExternalLink, Github, ChevronLeft, ChevronRight, Layers, Sparkles } from 'lucide-react';
 
@@ -8,23 +8,61 @@ interface ProjectModalProps {
 }
 
 export const ProjectModal: React.FC<ProjectModalProps> = ({ project, onClose }) => {
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Always reset slide to first screenshot when project changes
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [project?.id]);
+
+  const images = project?.screenshots && project.screenshots.length > 0
+    ? project.screenshots
+    : project?.image ? [project.image] : [];
+
+  const nextImage = useCallback(() => {
+    if (images.length === 0) return;
+    setActiveImageIndex((prev) => (prev + 1) % images.length);
+  }, [images.length]);
+
+  const prevImage = useCallback(() => {
+    if (images.length === 0) return;
+    setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  }, [images.length]);
+
+  // Handle body scroll lock & keyboard shortcuts (Escape, ArrowLeft, ArrowRight)
+  useEffect(() => {
+    if (!project) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowRight') {
+        nextImage();
+      } else if (e.key === 'ArrowLeft') {
+        prevImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [project, onClose, nextImage, prevImage]);
+
   if (!project) return null;
 
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const images = project.screenshots && project.screenshots.length > 0
-    ? project.screenshots
-    : [project.image];
-
-  const nextImage = () => {
-    setActiveImageIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const prevImage = () => {
-    setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="project-modal-title"
+    >
       <div 
         className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-dark-900 border border-slate-800/80 rounded-2xl shadow-2xl shadow-cyber-purple/10 flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -35,7 +73,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ project, onClose }) 
             <span className="px-3 py-1 text-xs font-semibold tracking-wider uppercase rounded-full bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/30">
               {project.category}
             </span>
-            <h3 className="text-xl font-bold text-white font-display">{project.name}</h3>
+            <h3 id="project-modal-title" className="text-xl font-bold text-white font-display">{project.name}</h3>
           </div>
           <button
             onClick={onClose}
@@ -49,11 +87,11 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ project, onClose }) 
         {/* Gallery / Main view */}
         <div className="relative bg-black/50 aspect-video w-full overflow-hidden flex items-center justify-center border-b border-slate-800/60">
           <img
-            src={images[activeImageIndex]}
+            src={images[activeImageIndex] || project.image}
             alt={`${project.name} screenshot ${activeImageIndex + 1}`}
             className="w-full h-full object-contain"
+            decoding="async"
             onError={(e) => {
-              // Graceful placeholder fallback if external image fails
               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80';
             }}
           />

@@ -107,6 +107,7 @@ const PortfolioApp: React.FC = () => {
           onClose={handleCloseAdminDashboard}
           onShowToast={showToast}
           onPreviewProject={(proj) => setSelectedProject(proj)}
+          onRequireLogin={() => setShowAdminLogin(true)}
         />
       )}
 

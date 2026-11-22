@@ -29,7 +29,7 @@
   - Strictly no unauthorized social media icons.
 - **Private Admin Dashboard (`/admin`)**:
   - Direct route at `/admin` or via the top navigation `Admin` shield button.
-  - Protected with authentication (default password: `admin123`).
+  - Protected with Supabase Authentication (requires verified admin email `mooreda542@gmail.com`). No hardcoded or default passwords.
   - **Profile Management**: Upload, preview, replace, or delete photo; update official name, display name, title, contact details, and bio narrative.
   - **Project Management**: Add new projects, edit existing projects, upload main image and multiple screenshots, edit technology tags, and preview.
   - **Skills Management**: Add new skills, change categories, edit descriptions, or remove skills.
@@ -78,7 +78,8 @@ Visit [http://localhost:4173](http://localhost:4173).
 ## 🔐 Admin Dashboard Access
 
 - **URL**: Navigate to `http://localhost:3000/#admin` or click the **Admin** shield icon in the top navigation bar.
-- **Default Local Password**: `admin123`
+- **Authentication**: Requires Supabase Authentication with verified owner email `mooreda542@gmail.com`.
+- **Security**: Default/hardcoded passwords have been completely removed. Unauthorized users and non-admin accounts cannot access or mutate portfolio data.
 
 ---
 
@@ -95,7 +96,6 @@ Create a `.env` file in the project root:
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
-VITE_ADMIN_PASSWORD=admin123
 ```
 *(Alternatively, enter these credentials directly in the Admin Dashboard under the "Cloud Sync & Supabase" tab!)*
 

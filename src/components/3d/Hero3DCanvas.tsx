@@ -179,9 +179,12 @@ const Scene: React.FC<{ mouse: React.MutableRefObject<[number, number]> }> = ({ 
 };
 
 export const Hero3DCanvas: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const mouse = useRef<[number, number]>([0, 0]);
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
+  const [isVisible, setIsVisible] = useState<boolean>(true);
+  const [isTabActive, setIsTabActive] = useState<boolean>(true);
 
   useEffect(() => {
     // Check prefers-reduced-motion
@@ -202,7 +205,27 @@ export const Hero3DCanvas: React.FC = () => {
       setHasWebGL(false);
     }
 
-    return () => mediaQuery.removeEventListener('change', handler);
+    // Monitor document visibility (tab switching) to halt render loop when inactive
+    const handleVisibility = () => {
+      setIsTabActive(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Monitor IntersectionObserver to halt Three.js render loop when scrolled out of view
+    const container = containerRef.current;
+    let observer: IntersectionObserver | null = null;
+    if (container && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      }, { threshold: 0.05 });
+      observer.observe(container);
+    }
+
+    return () => {
+      mediaQuery.removeEventListener('change', handler);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (observer) observer.disconnect();
+    };
   }, []);
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -220,12 +243,14 @@ export const Hero3DCanvas: React.FC = () => {
 
   return (
     <div
+      ref={containerRef}
       onMouseMove={handleMouseMove}
       className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
     >
       <SceneFallback />
       <Canvas
         className="w-full h-full"
+        frameloop={isVisible && isTabActive ? 'always' : 'never'}
         dpr={[1, 1.5]}
         gl={{
           antialias: true,

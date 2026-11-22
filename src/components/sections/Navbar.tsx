@@ -15,9 +15,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin }) => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   const navLinks = [
     { name: 'About', href: '#about' },
@@ -109,7 +118,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin }) => {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 rounded-xl bg-dark-900 border border-slate-800 text-slate-300 hover:text-white"
-            aria-label="Toggle menu"
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -118,7 +129,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin }) => {
 
       {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-dark-950/95 border-b border-slate-800/80 backdrop-blur-xl px-6 py-6 space-y-4 animate-fade-in">
+        <div 
+          id="mobile-navigation-menu"
+          role="region"
+          aria-label="Mobile Navigation Menu"
+          className="md:hidden bg-dark-950/95 border-b border-slate-800/80 backdrop-blur-xl px-6 py-6 space-y-4 animate-fade-in"
+        >
           <div className="flex flex-col space-y-3">
             {navLinks.map((link) => (
               <a

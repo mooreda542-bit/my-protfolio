@@ -52,8 +52,12 @@ export const SkillManager: React.FC<SkillManagerProps> = ({ onShowToast }) => {
 
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Delete skill "${name}"?`)) {
-      await deleteSkill(id);
-      onShowToast(`Deleted skill "${name}"`);
+      try {
+        await deleteSkill(id);
+        onShowToast(`Deleted skill "${name}"`);
+      } catch (err: any) {
+        onShowToast(`Failed to delete skill: ${err.message || 'Unknown error'}`, 'error');
+      }
     }
   };
 

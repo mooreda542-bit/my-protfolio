@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { usePortfolio } from '../../context/PortfolioContext';
-import { getSupabaseCredentials, resetSupabaseInstance } from '../../lib/supabase';
-import { Database, CheckCircle, AlertTriangle, Key, ExternalLink, Download, Upload, Copy, Check } from 'lucide-react';
+import { getSupabaseCredentials, resetSupabaseInstance, isServiceRoleKey, ADMIN_EMAIL } from '../../lib/supabase';
+import { Database, CheckCircle, AlertTriangle, Key, ExternalLink, Download, Upload, Copy, Check, ShieldAlert } from 'lucide-react';
 
 interface SupabaseSettingsModalProps {
   onShowToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
 export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ onShowToast }) => {
-  const { data, refreshData, resetToDefaults } = usePortfolio();
+  const { data, isAdmin, refreshData, resetToDefaults } = usePortfolio();
   const credentials = getSupabaseCredentials();
 
   const [supabaseUrl, setSupabaseUrl] = useState(() => {
@@ -19,10 +19,15 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
     return localStorage.getItem('custom_supabase_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   });
 
-  const [isCopied, setIsCopied] = useState(false);
-
   const handleSaveCredentials = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Block service_role secret keys to protect security
+    if (isServiceRoleKey(supabaseKey)) {
+      onShowToast('SECURITY ALERT: Never enter your service-role key! Please use only your public anon key.', 'error');
+      return;
+    }
+
     if (supabaseUrl) {
       localStorage.setItem('custom_supabase_url', supabaseUrl.trim());
     } else {
@@ -37,10 +42,14 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
 
     resetSupabaseInstance();
     refreshData();
-    onShowToast('Supabase settings saved! Refreshing connection...');
+    onShowToast('Supabase settings updated securely! Refreshing connection...');
   };
 
   const handleExportBackup = () => {
+    if (!isAdmin) {
+      onShowToast('Unauthorized: Admin access required to export data', 'error');
+      return;
+    }
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(data, null, 2)
     )}`;
@@ -54,6 +63,10 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
   };
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) {
+      onShowToast('Unauthorized: Admin access required to restore data', 'error');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -89,12 +102,12 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
             </div>
             <div>
               <h3 className="text-base font-bold text-white font-display">
-                {credentials.isValid ? 'Supabase Online Cloud Connected' : 'Running in Local Offline Storage Mode'}
+                {credentials.isValid ? 'Supabase Online Cloud Connected' : 'Running in Local Storage Mode'}
               </h3>
               <p className="text-xs text-slate-400">
                 {credentials.isValid
-                  ? 'All profile updates, projects, and skills are synced with Supabase Database and Storage.'
-                  : 'Portfolio is fully functional using persistent browser local storage. Connect Supabase below to enable cloud sync across devices.'}
+                  ? 'All profile updates, projects, and skills are synced with Supabase Database and Storage with strict RLS enforcement.'
+                  : 'Portfolio operates using browser local storage. Connect Supabase below to enable authenticated cloud persistence.'}
               </p>
             </div>
           </div>
@@ -104,7 +117,7 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
               ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40'
               : 'bg-amber-950/60 text-amber-400 border-amber-500/40'
           }`}>
-            {credentials.isValid ? 'Active' : 'Offline / Standalone'}
+            {credentials.isValid ? 'Active & Protected' : 'Offline / Unconfigured'}
           </span>
         </div>
       </div>
@@ -117,7 +130,15 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
             Supabase Project Credentials
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            Provide your Supabase URL and Anon Public Key from your Supabase Dashboard (Settings &gt; API).
+            Provide your Supabase URL and public <span className="text-cyber-cyan font-mono">anon</span> key (Settings &gt; API).
+          </p>
+        </div>
+
+        {/* Security Warning Notice */}
+        <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-300">
+          <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <strong>Security Rule:</strong> Only use your public <code className="font-mono text-white">anon</code> key. Never paste your <code className="font-mono text-rose-300">service_role</code> secret key in any client application.
           </p>
         </div>
 
@@ -168,17 +189,16 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
       <div className="p-6 rounded-2xl bg-dark-900/40 border border-slate-800 space-y-4">
         <h4 className="text-sm font-bold text-white font-display flex items-center gap-2">
           <CheckCircle className="w-4 h-4 text-emerald-400" />
-          Database Schema Setup (supabase_schema.sql)
+          Database Schema & RLS Security Policies
         </h4>
         <p className="text-xs text-slate-400 leading-relaxed">
-          The project includes a ready-to-run SQL migration file named <code className="text-cyber-cyan font-mono">supabase_schema.sql</code> located in the root of the project. Simply copy and paste its contents into the Supabase SQL Editor to instantly generate:
+          The project includes an updated hardened SQL migration file named <code className="text-cyber-cyan font-mono">supabase_schema.sql</code> in the project root. It configures:
         </p>
 
         <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside font-mono">
-          <li>Table <code className="text-cyber-purple">profile</code> (with RLS policies)</li>
-          <li>Table <code className="text-cyber-purple">projects</code> (with RLS policies)</li>
-          <li>Table <code className="text-cyber-purple">skills</code> (with RLS policies)</li>
-          <li>Public Storage Bucket <code className="text-cyber-purple">portfolio-assets</code> for images</li>
+          <li>Public read-only policies for visitors</li>
+          <li>Owner-restricted write/update/delete policies bound to <span className="text-cyber-cyan">{ADMIN_EMAIL}</span></li>
+          <li>Protected storage bucket <code className="text-cyber-purple">portfolio-assets</code> requiring owner authentication for uploads & deletions</li>
         </ul>
       </div>
 
@@ -226,4 +246,3 @@ export const SupabaseSettingsModal: React.FC<SupabaseSettingsModalProps> = ({ on
     </div>
   );
 };
-

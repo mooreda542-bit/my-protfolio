@@ -74,8 +74,12 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onShowToast, onP
 
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete project "${name}"?`)) {
-      await deleteProject(id);
-      onShowToast(`Deleted project "${name}"`);
+      try {
+        await deleteProject(id);
+        onShowToast(`Deleted project "${name}"`);
+      } catch (err: any) {
+        onShowToast(`Failed to delete project: ${err.message || 'Unknown error'}`, 'error');
+      }
     }
   };
 
