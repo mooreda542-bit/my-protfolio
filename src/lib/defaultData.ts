@@ -1,0 +1,66 @@
+import { PortfolioData } from '../types/portfolio';
+
+export const INITIAL_DATA: PortfolioData = {
+  profile: {
+    name: 'Mohamed Reda Nour Mohamed',
+    displayName: 'Mohamed Reda',
+    title: 'Front-End Developer',
+    location: 'Zagazig, Sharqia, Egypt',
+    phone: '01018274271',
+    email: 'mooreda542@gmail.com',
+    github: 'https://github.com/mooreda542-bit',
+    about: 'I am a passionate Front-End Developer dedicated to crafting high-performance, modern, and interactive web interfaces. With strong expertise in React, TypeScript, and modern styling architectures, I focus on transforming complex ideas into responsive, accessible, and aesthetically pleasing digital experiences. Continuously learning and refining my skills through real-world and innovative practical projects.',
+    photoUrl: '/mohamed-reda.jpg',
+    heroGreeting: "Hi, I'm Mohamed Reda",
+    heroDescription: 'I build modern, interactive, and responsive web experiences using React and modern web technologies.',
+  },
+  projects: [
+    {
+      id: 'mazag-coffee',
+      name: 'Mazag Coffee',
+      category: 'E-Commerce Website',
+      description: 'A modern coffee e-commerce web application featuring a rich interactive catalog, bean roast selector, cart system, and responsive dark aesthetics crafted for artisan coffee lovers.',
+      technologies: ['React', 'JavaScript', 'HTML', 'CSS', 'Tailwind CSS', 'Vite', 'JSX'],
+      image: '/assets/projects/hero_roastery.jpg',
+      screenshots: [
+        '/assets/projects/hero_roastery.jpg',
+        '/assets/projects/beans_bag.jpg',
+        '/assets/projects/iced_coffee.jpg',
+        '/assets/projects/turkish_coffee.jpg',
+      ],
+      liveUrl: '',
+      githubUrl: '',
+      featured: true,
+    },
+    {
+      id: 'smart-home-energy',
+      name: 'Smart Home Energy Saving System',
+      category: 'Graduation Project',
+      description: 'An intelligent IoT-enabled smart home energy management system combining Arduino microcontrollers and a real-time React web dashboard to monitor household power consumption and remotely control lighting and home appliances.',
+      technologies: ['React', 'JavaScript', 'Arduino', 'HTML', 'CSS'],
+      image: 'https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=1200&q=80',
+      screenshots: [
+        'https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+      ],
+      liveUrl: '',
+      githubUrl: '',
+      featured: true,
+    },
+  ],
+  skills: [
+    { id: '1', name: 'HTML5', category: 'Languages & Core', description: 'Semantic markup, accessibility, modern standards' },
+    { id: '2', name: 'CSS3', category: 'Styling & Design', description: 'Responsive layouts, Flexbox, Grid, keyframes, transitions' },
+    { id: '3', name: 'JavaScript', category: 'Languages & Core', description: 'ES6+, asynchronous programming, DOM APIs, event loop' },
+    { id: '4', name: 'TypeScript', category: 'Languages & Core', description: 'Static typing, generics, strict interfaces, tooling' },
+    { id: '5', name: 'React', category: 'Libraries & Frameworks', description: 'Hooks, component architecture, state management, SPA' },
+    { id: '6', name: 'Tailwind CSS', category: 'Styling & Design', description: 'Utility-first styling, design systems, dark mode' },
+    { id: '7', name: 'Bootstrap', category: 'Styling & Design', description: 'Rapid grid prototyping, responsive component layouts' },
+    { id: '8', name: 'Git', category: 'Tools & Environment', description: 'Version control, branching, merging, conflict resolution' },
+    { id: '9', name: 'GitHub', category: 'Tools & Environment', description: 'Collaborative code hosting, CI/CD, issue tracking' },
+    { id: '10', name: 'Vite', category: 'Tools & Environment', description: 'Next-gen frontend tooling, lightning fast HMR and builds' },
+    { id: '11', name: 'Next.js', category: 'Libraries & Frameworks', description: 'Server-side rendering, routing, fullstack React apps' },
+    { id: '12', name: 'Antigravity', category: 'Tools & Environment', description: 'Agentic workflows, AI engineering, modern toolchains' },
+  ],
+};
+
